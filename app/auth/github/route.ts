@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 
 export async function POST() {
   const cookieStore = cookies()
-  const pendingCookies: Array<{ name: string; value: string }> = []
+  const pendingCookies: Array<{ name: string; value: string; options?: object }> = []
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,7 +15,7 @@ export async function POST() {
           return cookieStore.getAll()
         },
         setAll(cookiesToSet: Array<{ name: string; value: string; options?: object }>) {
-          cookiesToSet.forEach(({ name, value }) => pendingCookies.push({ name, value }))
+          cookiesToSet.forEach(({ name, value, options }) => pendingCookies.push({ name, value, options }))
         },
       },
     }
@@ -34,13 +34,12 @@ export async function POST() {
 
   const response = NextResponse.redirect(data.url, { status: 303 })
 
-  pendingCookies.forEach(({ name, value }) => {
+  pendingCookies.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, {
+      ...(options as object | undefined),
       path: '/',
       sameSite: 'lax',
-      httpOnly: true,
       secure: true,
-      maxAge: 60 * 60,
     })
   })
 
