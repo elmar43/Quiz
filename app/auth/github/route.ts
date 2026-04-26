@@ -1,0 +1,48 @@
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
+
+export async function POST() {
+  const cookieStore = cookies()
+  const pendingCookies: Array<{ name: string; value: string }> = []
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: object }>) {
+          cookiesToSet.forEach(({ name, value }) => pendingCookies.push({ name, value }))
+        },
+      },
+    }
+  )
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'github',
+    options: {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+    },
+  })
+
+  if (error || !data.url) {
+    return NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_SITE_URL))
+  }
+
+  const response = NextResponse.redirect(data.url, { status: 303 })
+
+  pendingCookies.forEach(({ name, value }) => {
+    response.cookies.set(name, value, {
+      path: '/',
+      sameSite: 'lax',
+      httpOnly: true,
+      secure: true,
+      maxAge: 60 * 60,
+    })
+  })
+
+  return response
+}
