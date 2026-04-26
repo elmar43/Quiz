@@ -32,7 +32,7 @@ export async function POST() {
     return NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_SITE_URL))
   }
 
-  const response = NextResponse.redirect(data.url)
+  const response = NextResponse.redirect(data.url, { status: 303 })
   pendingCookies.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
   })
