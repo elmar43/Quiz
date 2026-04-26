@@ -1,11 +1,12 @@
 'use client'
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 function CallbackHandler() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
     const code = searchParams.get('code')
@@ -15,9 +16,23 @@ function CallbackHandler() {
     }
     const supabase = createClient()
     supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
-      router.replace(error ? '/?error=auth_failed' : '/quiz')
+      if (error) {
+        setErrorMsg(error.message)
+      } else {
+        router.replace('/quiz')
+      }
     })
   }, [router, searchParams])
+
+  if (errorMsg) {
+    return (
+      <div className="flex flex-col items-center gap-4 text-center">
+        <p className="text-red-400 font-semibold">Erro de autenticação</p>
+        <p className="text-slate-300 text-sm font-mono bg-slate-800 px-4 py-2 rounded">{errorMsg}</p>
+        <a href="/" className="text-accent underline text-sm">Voltar</a>
+      </div>
+    )
+  }
 
   return <p className="text-slate-400">Autenticando...</p>
 }
